@@ -26,8 +26,8 @@ public class SwaggerConfig {
 
     private ApiInfo apiInfo() {
         return new ApiInfo(
-                "My tickets REST API",
-                "This is a description for my tickets API!",
+                "Walk traveler server REST API",
+                "This is a description for Walk Traveler Server - WTS!",
                 "1.0",
                 "Terms of service",
                 new Contact("Tommi Mustonen", "tommimustonen.fi", "tommi_mustonen@hotmail.com"),
