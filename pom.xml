@@ -180,7 +180,7 @@
     </dependencies>
 
     <build>
-        <finalName>event-service-server</finalName>
+        <finalName>walk-travel-server</finalName>
         <resources>
             <resource>
                 <directory>src/main/resources</directory>
