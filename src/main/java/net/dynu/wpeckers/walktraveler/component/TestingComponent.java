@@ -14,7 +14,7 @@ import javax.annotation.PostConstruct;
 import java.util.Date;
 
 @Component
-@Profile({ "default", "int", "sys"})
+@Profile({"default", "int", "sys"})
 @Slf4j
 @RequiredArgsConstructor
 public class TestingComponent {
@@ -24,23 +24,28 @@ public class TestingComponent {
 
     @PostConstruct
     public void postConstruct() {
-        UserEntity user = new UserEntity();
-        user.setEmail("tommi_mustonen@hotmail.com");
-        user.setRegisterDate(new Date());
-        user.setLatitude("60.2517865");
-        user.setLongitude("25.0999617");
-        Long userId = this.userService.create(user);
-        log.info("Created test user with ID {}" , userId);
+        String email = "tommi_mustonen@hotmail.com";
+        UserEntity user = this.userService.readByEmail(email);
+        if (user != null) {
+            user = new UserEntity();
+            user.setEmail(email);
+            user.setRegisterDate(new Date());
+            user.setLatitude("60.2517865");
+            user.setLongitude("25.0999617");
+            Long userId = this.userService.create(user);
+            log.info("Created test user with ID {}", userId);
 
-        PointEntity point = new PointEntity();
-        point.setLatitude("60.2517527");
-        point.setLongitude("25.0997910999");
-        point.setTitle("title");
-        point.setDescription("description");
-        point.setPointStatus(PointStatus.CREATED);
-        point.setUser(user);
-        Long pointId = pointService.create(point);
-        log.info("Created test point with ID {}", pointId);
+            PointEntity point = new PointEntity();
+            point.setLatitude("60.2517527");
+            point.setLongitude("25.0997910999");
+            point.setTitle("title");
+            point.setDescription("description");
+            point.setPointStatus(PointStatus.CREATED);
+            point.setUser(user);
+            Long pointId = pointService.create(point);
+            log.info("Created test point with ID {}", pointId);
+        } else {
+            log.info("Test user already exists in database!");
+        }
     }
-
 }
