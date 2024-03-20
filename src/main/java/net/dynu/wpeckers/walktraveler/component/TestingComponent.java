@@ -26,7 +26,7 @@ public class TestingComponent {
     public void postConstruct() {
         String email = "tommi_mustonen@hotmail.com";
         UserEntity user = this.userService.readByEmail(email);
-        if (user != null) {
+        if (user == null) {
             user = new UserEntity();
             user.setEmail(email);
             user.setRegisterDate(new Date());
