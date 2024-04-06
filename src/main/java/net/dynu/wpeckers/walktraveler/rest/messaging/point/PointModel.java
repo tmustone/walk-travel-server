@@ -21,4 +21,6 @@ public class PointModel {
     private String longitude;
     private String latitude;
     private String userEmail;
+    private int weight;
+    private String colorCode;
 }

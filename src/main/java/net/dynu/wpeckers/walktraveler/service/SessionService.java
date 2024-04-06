@@ -1,8 +1,10 @@
 package net.dynu.wpeckers.walktraveler.service;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.dynu.wpeckers.walktraveler.database.model.UserEntity;
 import net.dynu.wpeckers.walktraveler.exceptions.SessionTimeoutException;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
@@ -12,18 +14,31 @@ import java.util.Map;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class SessionService {
 
     private static final Map<String, UserEntity> sessionIdToUserMap = new HashMap<>();
     private static final Map<String, Long> sessionIdToExpirationTimeMap = new HashMap<>();
     private static final int SESSION_TIMEOUT_SECONDS = 60;
 
+    private final UserService userService;
+
+    @Value("${spring.profiles.active:}")
+    private String activeProfiles;
+
     public UserEntity getUser(String sessionId) throws SessionTimeoutException {
+
         UserEntity user = sessionIdToUserMap.get(sessionId);
         if (user != null) {
             sessionIdToExpirationTimeMap.put(sessionId, System.currentTimeMillis());
             return user;
         } else {
+            // For testing purposes in LOCAL and DEFAULT profile, sessionId "test" is working!
+            if ("test".equals(sessionId) && (activeProfiles.contains("default") || activeProfiles.contains("local"))) {
+                String tempUser = "tommi_mustonen@hotmail.com";
+                log.warn("Session ID test is now activated with spring profile {} for user {}", activeProfiles, tempUser);
+                return this.login("test",userService.readByEmail(tempUser));
+            }
             log.error("User not found from session with session ID \"{}\". Cannot continue : {}", sessionId, sessionIdToUserMap.keySet());
             throw new SessionTimeoutException("Session not found with ID " + sessionId + "!");
         }

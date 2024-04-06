@@ -50,6 +50,7 @@ public class PointService {
     public List<PointEntity> filterOnlyLatestDeleted(List<PointEntity> points) {
         List<PointEntity> result = new LinkedList<>();
         List<PointEntity> deletedPoints = new LinkedList<>();
+        List<PointEntity> collectedPoints = new LinkedList<>();
         for (PointEntity point : points) {
             if (point.getPointStatus().equals(PointStatus.DELETED)) {
                 if (point.getDeletedDate() != null) {
@@ -57,17 +58,21 @@ public class PointService {
                 } else {
                     log.warn("Skip point {} because deleted date is {}", point.getPointId(), point.getDeletedDate());
                 }
+            } else if (point.getPointStatus().equals(PointStatus.COLLECTED)) {
+                if (point.getCollectedDate() != null) {
+                    collectedPoints.add(point);
+                } else {
+                    log.warn("Skip point {} because collected date is {}", point.getPointId(), point.getDeletedDate());
+                }
             } else {
                 result.add(point);
             }
         }
-        Collections.sort(deletedPoints, new Comparator<PointEntity>() {
-            @Override
-            public int compare(PointEntity o1, PointEntity o2) {
-                return o1.getDeletedDate().compareTo(o2.getDeletedDate());
-            }
-        });
-
+        Collections.sort(deletedPoints, Comparator.comparing(PointEntity::getDeletedDate));
+        Collections.sort(collectedPoints, Comparator.comparing(PointEntity::getCollectedDate));
+        result.addAll(collectedPoints.subList(0,Math.min(collectedPoints.size(), 6)));
+        result.addAll(deletedPoints.subList(0,Math.min(collectedPoints.size(), 5)));
+        /*
         int i = 0;
         for (PointEntity point : deletedPoints) {
             result.add(point);
@@ -76,6 +81,7 @@ public class PointService {
             }
             i++;
         }
+        */
         return result;
 
     }

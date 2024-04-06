@@ -26,4 +26,7 @@ public class PointEntity extends BaseObject {
     @ManyToOne
     @JoinColumn(name = "user", nullable = true)
     private UserEntity user;
+
+    private int weight;
+    private String colorCode;
 }

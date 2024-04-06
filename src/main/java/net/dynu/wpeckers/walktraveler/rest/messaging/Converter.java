@@ -1,8 +1,10 @@
 package net.dynu.wpeckers.walktraveler.rest.messaging;
 
 import net.dynu.wpeckers.walktraveler.database.model.PointEntity;
+import net.dynu.wpeckers.walktraveler.database.model.PointTemplateEntity;
 import net.dynu.wpeckers.walktraveler.database.model.UserEntity;
 import net.dynu.wpeckers.walktraveler.rest.messaging.point.PointModel;
+import net.dynu.wpeckers.walktraveler.rest.messaging.pointtemplate.PointTemplateModel;
 import net.dynu.wpeckers.walktraveler.rest.messaging.user.UserModel;
 
 import java.util.LinkedList;
@@ -44,6 +46,8 @@ public class Converter {
         p.setLongitude(point.getLongitude());
         p.setLatitude(point.getLatitude());
         p.setTerminationDate(point.getTerminationDate());
+        p.setWeight(point.getWeight());
+        p.setColorCode(point.getColorCode());
         return p;
     }
 
@@ -56,5 +60,31 @@ public class Converter {
             list.add(convert(p));
         }
         return list;
+    }
+
+    public PointTemplateModel convert(PointTemplateEntity pointTemplate) {
+        if (pointTemplate == null) {
+            return null;
+        }
+        PointTemplateModel m = new PointTemplateModel();
+        m.setPointTemplateId(pointTemplate.getPointTemplateId());
+        m.setTitle(pointTemplate.getTitle());
+        m.setDescription(pointTemplate.getDescription());
+        m.setWeight(pointTemplate.getWeight());
+        m.setColorCode(pointTemplate.getColorCode());
+        return m;
+    }
+
+    public PointTemplateEntity convert(PointTemplateModel pointTemplate) {
+        if (pointTemplate == null) {
+            return null;
+        }
+        PointTemplateEntity e = new PointTemplateEntity();
+        e.setPointTemplateId(pointTemplate.getPointTemplateId());
+        e.setTitle(pointTemplate.getTitle());
+        e.setDescription(pointTemplate.getDescription());
+        e.setWeight(pointTemplate.getWeight());
+        e.setColorCode(pointTemplate.getColorCode());
+        return e;
     }
 }

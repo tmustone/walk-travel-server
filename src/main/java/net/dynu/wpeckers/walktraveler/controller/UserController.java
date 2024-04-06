@@ -30,6 +30,7 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -119,7 +120,7 @@ public class UserController extends ControllerBase {
     @ApiOperation(value = "Login user")
     @RequestMapping(value = "/login", method = RequestMethod.POST, produces = "application/json")
     public @ResponseBody LoginUserResponse loginUser(@RequestBody LoginUserRequest request) {
-        log.info(" === loginUser()===");
+        log.info(" === loginUser({})===", request.getSessionId());
         ValidateSessionResponse validateSessionResponse = this.authenticationServiceClient.getAuthenticationClient().validateSession(request.getSessionId());
         log.info("AuthenticationService response : " + validateSessionResponse);
 
@@ -128,6 +129,8 @@ public class UserController extends ControllerBase {
             if (validateSessionResponse.getSession().getServiceName().equals(authenticationServiceClient.getServiceName())) {
                 String email = validateSessionResponse.getSession().getUserEmail();
                 UserEntity user = userService.login(email);
+                user.setLastLoginDate(new Date());
+                userService.update(user);
                 sessionService.login(request.getSessionId(), user);
                 response.setUser(converter.convert(user));
                 response.setMessage("User " + validateSessionResponse.getSession().getUserEmail() + " successfully logged in to service!");

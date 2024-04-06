@@ -1,8 +1,11 @@
 package net.dynu.wpeckers.walktraveler.database.model;
 
+import lombok.Data;
+
 import javax.persistence.*;
 import java.util.Date;
 
+@Data
 public class BaseObject {
 
     protected Date createdDate;
@@ -29,11 +32,4 @@ public class BaseObject {
         modifiedDate = new Date();
     }
 
-    public Date getCreatedDate() {
-        return this.createdDate;
-    }
-
-    public Date getModifiedDate() {
-        return this.modifiedDate;
-    }
 }
