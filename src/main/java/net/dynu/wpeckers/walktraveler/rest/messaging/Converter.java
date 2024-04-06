@@ -48,6 +48,7 @@ public class Converter {
         p.setTerminationDate(point.getTerminationDate());
         p.setWeight(point.getWeight());
         p.setColorCode(point.getColorCode());
+        p.setTotalAgeSeconds(point.getTotalAgeSeconds());
         return p;
     }
 

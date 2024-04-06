@@ -23,4 +23,5 @@ public class PointModel {
     private String userEmail;
     private int weight;
     private String colorCode;
+    private int totalAgeSeconds;
 }

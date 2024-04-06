@@ -22,9 +22,7 @@ import java.util.Random;
 @Slf4j
 public class PointService {
 
-    private final long EARTH_RADIUS_IN_METERS = 6371000;
     private final PointRepository pointRepository;
-    private Random random = new Random();
 
     public Long create(PointEntity point) {
         point.setCreatedDate(new Date());
@@ -71,7 +69,7 @@ public class PointService {
         Collections.sort(deletedPoints, Comparator.comparing(PointEntity::getDeletedDate));
         Collections.sort(collectedPoints, Comparator.comparing(PointEntity::getCollectedDate));
         result.addAll(collectedPoints.subList(0,Math.min(collectedPoints.size(), 6)));
-        result.addAll(deletedPoints.subList(0,Math.min(collectedPoints.size(), 5)));
+        result.addAll(deletedPoints.subList(0,Math.min(deletedPoints.size(), 5)));
         /*
         int i = 0;
         for (PointEntity point : deletedPoints) {
@@ -95,40 +93,13 @@ public class PointService {
         return pointRepository.findAll();
     }
 
-    public void update(PointEntity point) {
-        pointRepository.save(point);
+    public PointEntity update(PointEntity point) {
+        return pointRepository.save(point);
     }
 
     public void delete(PointEntity point) {
         point.setDeletedDate(new Date());
         point.setPointStatus(PointStatus.DELETED);
         pointRepository.save(point);
-    }
-
-    public List<PointEntity> collectPoints(String userEmail, String longitude, String latitude) {
-        log.debug("____collectPoints____");
-        List<PointEntity> collectedPoints = new LinkedList<>();
-        List<PointEntity> userActivePoints = this.readByUserEmailAndPointStatus(userEmail, PointStatus.CREATED);
-        for (PointEntity point : userActivePoints) {
-
-            double lat1Rad = Math.toRadians(Float.valueOf(latitude));
-            double lat2Rad = Math.toRadians(Float.valueOf(point.getLatitude()));
-            double lon1Rad = Math.toRadians(Float.valueOf(longitude));
-            double lon2Rad = Math.toRadians(Float.valueOf(point.getLongitude()));
-
-            double x = (lon2Rad - lon1Rad) * Math.cos((lat1Rad + lat2Rad) / 2);
-            double y = (lat2Rad - lat1Rad);
-            double distance = Math.sqrt(x * x + y * y) * EARTH_RADIUS_IN_METERS;
-
-            log.debug("\t point : {} {} {} {} {}", point.getPointId(), point.getTitle(), point.getLongitude(), point.getLatitude(), distance);
-            if (distance < 25) {
-                point.setPointStatus(PointStatus.COLLECTED);
-                point.setCollectedDate(new Date());
-                PointEntity saved = pointRepository.save(point);
-                collectedPoints.add(saved);
-                log.info("User {} collected point {} with title {}", userEmail, point.getPointId(), point.getTitle());
-            }
-        }
-        return collectedPoints;
     }
 }

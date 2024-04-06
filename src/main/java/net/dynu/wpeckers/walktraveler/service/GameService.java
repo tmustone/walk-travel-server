@@ -11,8 +11,11 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 
 @Component
@@ -21,8 +24,10 @@ import java.util.Random;
 @RequiredArgsConstructor
 public class GameService {
 
-    private final int MIN_AGE_SECONDS = 10;
-    private final int MAX_AGE_SECONDS = 3*60;
+    private final int MIN_AGE_SECONDS = 3*60;
+    private final int MAX_AGE_SECONDS = 10*60;
+
+    private final long EARTH_RADIUS_IN_METERS = 6371000;
 
     private final SessionService sessionService;
     private final PointService pointService;
@@ -31,6 +36,32 @@ public class GameService {
     private Random random = new Random();
     private long lastShownSessions;
 
+    private static final Map<Long,Long> userIdToLastCollectTimeMap = new HashMap<>();
+    private static final Map<Long,Integer> userIdToCollectCountMap = new HashMap<>();
+
+    private int getUserCollectCount(UserEntity user) {
+        Integer collectCount = userIdToCollectCountMap.get(user.getUserId());
+        log.info("getUserCollectCount({},{})={}", user.getUserId(), user.getEmail(), collectCount);
+        return collectCount == null ? 0 : collectCount.intValue();
+    }
+
+    private void addCollectCount(UserEntity user) {
+        int newCount = getUserCollectCount(user) + 1;
+        log.info("Update user {} ({}) collect count to {}", user.getEmail(), user.getUserId(), newCount);
+        userIdToCollectCountMap.put(user.getUserId(), newCount);
+        userIdToLastCollectTimeMap.put(user.getUserId(), System.currentTimeMillis());
+    }
+
+    private long getUserLastCollectTime(UserEntity user) {
+        Long lastCollectTime = userIdToLastCollectTimeMap.get(user.getUserId());
+        return lastCollectTime == null ? 0 : lastCollectTime;
+    }
+
+    private void resetUserLastCollectData(UserEntity user) {
+        this.userIdToLastCollectTimeMap.put(user.getUserId(), 0L);
+        this.userIdToCollectCountMap.put(user.getUserId(), 0);
+        log.info("RESET USER LAST COLLECT DATA : {} ({})", user.getEmail(), user.getUserId());
+    }
 
     @Scheduled(fixedDelay = 10000, initialDelay = 10000)
     public void runGame() {
@@ -53,8 +84,8 @@ public class GameService {
         for (UserEntity user : onlineUsers) {
             long onlineSeconds = user.getLastLoginDate() == null ? -1 : (System.currentTimeMillis() - user.getLastLoginDate().getTime())/1000;
             log.debug("Online user : email={}, onlineSeconds={}" , user.getEmail(), onlineSeconds);
-            List<PointEntity> points =  pointService.readByUserEmailAndPointStatus(user.getEmail(), PointStatus.CREATED);
-            Iterator<PointEntity> iterator = points.iterator();
+            List<PointEntity> activePoints =  pointService.readByUserEmailAndPointStatus(user.getEmail(), PointStatus.CREATED);
+            Iterator<PointEntity> iterator = activePoints.iterator();
             while (iterator.hasNext()) {
                 PointEntity point = iterator.next();
                 if (point.getTerminationDate() == null || now.after(point.getTerminationDate())) {
@@ -63,37 +94,51 @@ public class GameService {
                     iterator.remove();
                 }
             }
-            if (onlineSeconds > 6 && points.size() < pointsOnline) {
-                if (user.getLatitude() == null  || user.getLongitude() == null) {
-                    log.warn("User {} latitude {} or longitude {} is null! Cannot create points to this user!", user.getEmail(), user.getLatitude(), user.getLongitude());
-                    break;
-                }
-                for (int i = points.size(); i <= pointsOnline; i++) {
-                    log.info("Create 1 new point to {} {}", user.getLatitude(), user.getLongitude());
-                    int terminationTimeInSeconds = MIN_AGE_SECONDS + random.nextInt(MAX_AGE_SECONDS-MIN_AGE_SECONDS);
 
-                    PointEntity point = new PointEntity();
-                    point.setTitle("" + terminationTimeInSeconds + " seconds point");
-                    point.setDescription("Description of point");
-                    point.setPointStatus(PointStatus.CREATED);
-                    point.setTerminationDate(new Date(System.currentTimeMillis() + terminationTimeInSeconds*1000));
-                    point.setUser(user);
+            // Check when user last collected something
+            if (getUserLastCollectTime(user) + 30*60*1000 < System.currentTimeMillis()) {
+                this.resetUserLastCollectData(user);
+            }
+            long lastCollectTime = getUserLastCollectTime(user);
+            int collectCount = getUserCollectCount(user);
+            long nextPointCreationTime = lastCollectTime + (collectCount * 1000*60);
+            boolean timeToCreateNewPoint  =  nextPointCreationTime < System.currentTimeMillis() ? true : false;
+            log.info("CREATE POINT STATUS : onlineSeconds={}, activePointCount={}, collectCount={}, lastCollectTime={}", onlineSeconds, activePoints.size(), collectCount, new Date(lastCollectTime));
+            if (onlineSeconds > 6 && activePoints.size() < pointsOnline) {
+                if (timeToCreateNewPoint == false) {
+                    long secondsLeft = (nextPointCreationTime - System.currentTimeMillis())/1000;
+                    log.info("It is not time to create new points yet (wait {} seconds)! Collected {} points and last was in {}", secondsLeft, collectCount, new Date(lastCollectTime));
+                } else {
+                    if (user.getLatitude() == null || user.getLongitude() == null) {
+                        log.warn("User {} latitude {} or longitude {} is null! Cannot create points to this user!", user.getEmail(), user.getLatitude(), user.getLongitude());
+                        break;
+                    }
+                    for (int i = activePoints.size(); i <= pointsOnline; i++) {
+                        log.info("Create 1 new point to {} {}", user.getLatitude(), user.getLongitude());
+                        int terminationTimeInSeconds = MIN_AGE_SECONDS + random.nextInt(MAX_AGE_SECONDS - MIN_AGE_SECONDS);
 
-                    // Create custom variables
-                    List<PointTemplateEntity> templates = pointTemplateService.readAll();
-                    PointTemplateEntity random = templates.get(this.random.nextInt(templates.size()));
-                    point.setTitle(random.getTitle());
-                    point.setDescription(random.getDescription());
-                    point.setWeight(random.getWeight());
-                    point.setColorCode(random.getColorCode());
+                        PointEntity point = new PointEntity();
+                        point.setPointStatus(PointStatus.CREATED);
+                        point.setTerminationDate(new Date(System.currentTimeMillis() + terminationTimeInSeconds * 1000));
+                        point.setUser(user);
 
-                    // Set random coordinates
-                    Float latitude = Float.valueOf(user.getLatitude());
-                    Float longitude = Float.valueOf(user.getLongitude());
-                    point.setLatitude("" + (latitude.floatValue() + getRandomChange()));
-                    point.setLongitude("" + (longitude.floatValue() + getRandomChange()));
+                        // Create custom variables
+                        List<PointTemplateEntity> templates = pointTemplateService.readAll();
+                        PointTemplateEntity random = templates.get(this.random.nextInt(templates.size()));
+                        point.setTitle(random.getTitle());
+                        point.setDescription(random.getDescription());
+                        point.setWeight(getRandomWeight());
+                        point.setColorCode(random.getColorCode());
+                        point.setTotalAgeSeconds(terminationTimeInSeconds);
 
-                    pointService.create(point);
+                        // Set random coordinates
+                        Float latitude = Float.valueOf(user.getLatitude());
+                        Float longitude = Float.valueOf(user.getLongitude());
+                        point.setLatitude("" + (latitude.floatValue() + getRandomChange()));
+                        point.setLongitude("" + (longitude.floatValue() + getRandomChange()));
+
+                        pointService.create(point);
+                    }
                 }
             }
         }
@@ -109,4 +154,33 @@ public class GameService {
     public int getRandomWeight() {
         return this.random.nextInt(5)*10;
     }
+
+    public List<PointEntity> collectPoints(UserEntity user, String longitude, String latitude) {
+        log.debug("____collectPoints____");
+        List<PointEntity> collectedPoints = new LinkedList<>();
+        List<PointEntity> userActivePoints = pointService.readByUserEmailAndPointStatus(user.getEmail(), PointStatus.CREATED);
+        for (PointEntity point : userActivePoints) {
+
+            double lat1Rad = Math.toRadians(Float.valueOf(latitude));
+            double lat2Rad = Math.toRadians(Float.valueOf(point.getLatitude()));
+            double lon1Rad = Math.toRadians(Float.valueOf(longitude));
+            double lon2Rad = Math.toRadians(Float.valueOf(point.getLongitude()));
+
+            double x = (lon2Rad - lon1Rad) * Math.cos((lat1Rad + lat2Rad) / 2);
+            double y = (lat2Rad - lat1Rad);
+            double distance = Math.sqrt(x * x + y * y) * EARTH_RADIUS_IN_METERS;
+
+            log.debug("\t point : {} {} {} {} {}", point.getPointId(), point.getTitle(), point.getLongitude(), point.getLatitude(), distance);
+            if (distance < 25) {
+                point.setPointStatus(PointStatus.COLLECTED);
+                point.setCollectedDate(new Date());
+                point = pointService.update(point);
+                collectedPoints.add(point);
+                log.info("User {} collected point {} with title {}", user.getEmail(), point.getPointId(), point.getTitle());
+                addCollectCount(user);
+            }
+        }
+        return collectedPoints;
+    }
+
 }

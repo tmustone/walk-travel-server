@@ -29,4 +29,5 @@ public class PointEntity extends BaseObject {
 
     private int weight;
     private String colorCode;
+    private int totalAgeSeconds;
 }

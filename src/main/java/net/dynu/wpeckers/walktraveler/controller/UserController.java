@@ -8,6 +8,7 @@ import net.dynu.wpeckers.authentication.api.enums.MessageStatus;
 import net.dynu.wpeckers.authentication.api.messaging.user.ValidateSessionResponse;
 import net.dynu.wpeckers.common.Common;
 import net.dynu.wpeckers.walktraveler.configuration.AuthenticationConfiguration;
+import net.dynu.wpeckers.walktraveler.database.model.PointEntity;
 import net.dynu.wpeckers.walktraveler.database.model.UserEntity;
 import net.dynu.wpeckers.walktraveler.exceptions.SessionTimeoutException;
 import net.dynu.wpeckers.walktraveler.rest.enums.Status;
@@ -19,6 +20,7 @@ import net.dynu.wpeckers.walktraveler.rest.messaging.user.ReadUsersResponse;
 import net.dynu.wpeckers.walktraveler.rest.messaging.user.UpdatePositionRequest;
 import net.dynu.wpeckers.walktraveler.rest.messaging.user.UpdatePositionResponse;
 import net.dynu.wpeckers.walktraveler.rest.messaging.user.UserModel;
+import net.dynu.wpeckers.walktraveler.service.GameService;
 import net.dynu.wpeckers.walktraveler.service.PointService;
 import net.dynu.wpeckers.walktraveler.service.SessionService;
 import net.dynu.wpeckers.walktraveler.service.UserService;
@@ -45,6 +47,7 @@ public class UserController extends ControllerBase {
     private final AuthenticationConfiguration authenticationServiceClient;
     private final SessionService sessionService;
     private final PointService pointService;
+    private final GameService gameService;
 
     @ApiOperation(value = "Read a user with ID")
     @RequestMapping(value = "/user/{id}", method = RequestMethod.GET)
@@ -108,12 +111,16 @@ public class UserController extends ControllerBase {
         user.setLatitude(request.getLatitude());
         user.setLongitude(request.getLongitude());
         userService.update(user);
+
+        // Calculate and collected points
+        List<PointEntity> collectedPoints = gameService.collectPoints(user, user.getLongitude(), user.getLatitude());
+
         UpdatePositionResponse response = new UpdatePositionResponse();
         response.setMessage("Position updated successfully!");
         response.setStatus(Status.OK);
         response.setLongitude(request.getLongitude());
         response.setLatitude(request.getLatitude());
-        response.setCollectedPoints(converter.convertPoints(pointService.collectPoints(user.getEmail(), user.getLongitude(), user.getLatitude())));
+        response.setCollectedPoints(converter.convertPoints(collectedPoints));
         return response;
     }
 
