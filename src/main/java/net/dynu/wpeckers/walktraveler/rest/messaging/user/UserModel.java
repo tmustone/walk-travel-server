@@ -15,4 +15,6 @@ public class UserModel {
     private Date registerDate;
     private String longitude;
     private String latitude;
+    private Integer totalCollectCount;
+    private Integer currentCollectCount;
 }

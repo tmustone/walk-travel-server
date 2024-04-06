@@ -46,7 +46,6 @@ public class UserController extends ControllerBase {
     private final UserService userService;
     private final AuthenticationConfiguration authenticationServiceClient;
     private final SessionService sessionService;
-    private final PointService pointService;
     private final GameService gameService;
 
     @ApiOperation(value = "Read a user with ID")
@@ -88,6 +87,7 @@ public class UserController extends ControllerBase {
         sessionService.validateSession(sessionId);
         log.info(" === readOnlineUsers()===");
         List<UserModel> users = converter.convertUsers(sessionService.getLoggedInUsers());
+        users = gameService.populateCollectCounts(users);
         log.info("Read " + users.size() + " users successfully!");
         return new ReadUsersResponse(Status.OK, "Read " + users.size() + " online users successfully!", users);
     }
@@ -153,5 +153,4 @@ public class UserController extends ControllerBase {
         }
         return response;
     }
-
 }

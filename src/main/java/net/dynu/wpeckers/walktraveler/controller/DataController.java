@@ -12,6 +12,8 @@ import net.dynu.wpeckers.walktraveler.database.model.UserEntity;
 import net.dynu.wpeckers.walktraveler.exceptions.SessionTimeoutException;
 import net.dynu.wpeckers.walktraveler.rest.messaging.map.ReadMapDataResponse;
 import net.dynu.wpeckers.walktraveler.rest.messaging.point.PointModel;
+import net.dynu.wpeckers.walktraveler.rest.messaging.user.UserModel;
+import net.dynu.wpeckers.walktraveler.service.GameService;
 import net.dynu.wpeckers.walktraveler.service.PointService;
 import net.dynu.wpeckers.walktraveler.service.SessionService;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -19,6 +21,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 @Slf4j
 @RestController
@@ -29,13 +33,16 @@ public class DataController extends ControllerBase {
 
     private final SessionService sessionService;
     private final PointService pointService;
+    private final GameService gameService;
 
     @ApiOperation(value = "Read map data")
     @RequestMapping(value = "/map", method = RequestMethod.GET)
     public @ResponseBody ReadMapDataResponse readMapData(@RequestHeader(value = "sessionId", required = false) String sessionId) throws SessionTimeoutException {
         UserEntity user = sessionService.validateSession(sessionId);
         ReadMapDataResponse response = new ReadMapDataResponse();
-        response.setOnlineUsers(converter.convertUsers(sessionService.getLoggedInUsers()));
+        List<UserModel> onlineUsers = converter.convertUsers(sessionService.getLoggedInUsers());
+        gameService.populateCollectCounts(onlineUsers);
+        response.setOnlineUsers(onlineUsers);
         response.setPoints(converter.convertPoints(pointService.readLatestPointsForUser(user.getEmail())));
         response.setMessage("Read " + response.getOnlineUsers().size() + " online users and " + response.getPoints().size() + " points!");
         response.setMessageStatus(MessageStatus.OK);

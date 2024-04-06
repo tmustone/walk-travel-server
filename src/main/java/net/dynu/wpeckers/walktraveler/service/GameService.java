@@ -6,6 +6,7 @@ import net.dynu.wpeckers.walktraveler.database.model.PointEntity;
 import net.dynu.wpeckers.walktraveler.database.model.PointStatus;
 import net.dynu.wpeckers.walktraveler.database.model.PointTemplateEntity;
 import net.dynu.wpeckers.walktraveler.database.model.UserEntity;
+import net.dynu.wpeckers.walktraveler.rest.messaging.user.UserModel;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -36,31 +37,31 @@ public class GameService {
     private Random random = new Random();
     private long lastShownSessions;
 
-    private static final Map<Long,Long> userIdToLastCollectTimeMap = new HashMap<>();
-    private static final Map<Long,Integer> userIdToCollectCountMap = new HashMap<>();
+    private static final Map<String,Long> userIdToLastCollectTimeMap = new HashMap<>();
+    private static final Map<String,Integer> userIdToCollectCountMap = new HashMap<>();
 
-    private int getUserCollectCount(UserEntity user) {
-        Integer collectCount = userIdToCollectCountMap.get(user.getUserId());
-        log.info("getUserCollectCount({},{})={}", user.getUserId(), user.getEmail(), collectCount);
+    private int getUserCollectCount(String email) {
+        Integer collectCount = userIdToCollectCountMap.get(email);
+        log.info("getUserCollectCount({})={}", email, collectCount);
         return collectCount == null ? 0 : collectCount.intValue();
     }
 
-    private void addCollectCount(UserEntity user) {
-        int newCount = getUserCollectCount(user) + 1;
-        log.info("Update user {} ({}) collect count to {}", user.getEmail(), user.getUserId(), newCount);
-        userIdToCollectCountMap.put(user.getUserId(), newCount);
-        userIdToLastCollectTimeMap.put(user.getUserId(), System.currentTimeMillis());
+    private void addCollectCount(String email) {
+        int newCount = getUserCollectCount(email) + 1;
+        log.info("Update user {} collect count to {}", email, newCount);
+        userIdToCollectCountMap.put(email, newCount);
+        userIdToLastCollectTimeMap.put(email, System.currentTimeMillis());
     }
 
-    private long getUserLastCollectTime(UserEntity user) {
-        Long lastCollectTime = userIdToLastCollectTimeMap.get(user.getUserId());
+    private long getUserLastCollectTime(String email) {
+        Long lastCollectTime = userIdToLastCollectTimeMap.get(email);
         return lastCollectTime == null ? 0 : lastCollectTime;
     }
 
-    private void resetUserLastCollectData(UserEntity user) {
-        this.userIdToLastCollectTimeMap.put(user.getUserId(), 0L);
-        this.userIdToCollectCountMap.put(user.getUserId(), 0);
-        log.info("RESET USER LAST COLLECT DATA : {} ({})", user.getEmail(), user.getUserId());
+    private void resetUserLastCollectData(String email) {
+        this.userIdToLastCollectTimeMap.put(email, 0L);
+        this.userIdToCollectCountMap.put(email, 0);
+        log.info("RESET USER LAST COLLECT DATA : {}", email);
     }
 
     @Scheduled(fixedDelay = 10000, initialDelay = 10000)
@@ -96,11 +97,12 @@ public class GameService {
             }
 
             // Check when user last collected something
-            if (getUserLastCollectTime(user) + 30*60*1000 < System.currentTimeMillis()) {
-                this.resetUserLastCollectData(user);
+            if (getUserLastCollectTime(user.getEmail()) + 30*60*1000 < System.currentTimeMillis()) {
+                this.resetUserLastCollectData(user.getEmail());
             }
-            long lastCollectTime = getUserLastCollectTime(user);
-            int collectCount = getUserCollectCount(user);
+
+            long lastCollectTime = getUserLastCollectTime(user.getEmail());
+            int collectCount = getUserCollectCount(user.getEmail());
             long nextPointCreationTime = lastCollectTime + (collectCount * 1000*60);
             boolean timeToCreateNewPoint  =  nextPointCreationTime < System.currentTimeMillis() ? true : false;
             log.info("CREATE POINT STATUS : onlineSeconds={}, activePointCount={}, collectCount={}, lastCollectTime={}", onlineSeconds, activePoints.size(), collectCount, new Date(lastCollectTime));
@@ -177,10 +179,19 @@ public class GameService {
                 point = pointService.update(point);
                 collectedPoints.add(point);
                 log.info("User {} collected point {} with title {}", user.getEmail(), point.getPointId(), point.getTitle());
-                addCollectCount(user);
+                addCollectCount(user.getEmail());
             }
         }
         return collectedPoints;
     }
 
+    public List<UserModel> populateCollectCounts(List<UserModel> users) {
+        List<UserModel> result = new LinkedList<>();
+        for (UserModel userModel : users) {
+            userModel.setCurrentCollectCount(this.getUserCollectCount(userModel.getEmail()));
+            userModel.setTotalCollectCount(this.getUserCollectCount(userModel.getEmail()));
+            result.add(userModel);
+        }
+        return result;
+    }
 }
