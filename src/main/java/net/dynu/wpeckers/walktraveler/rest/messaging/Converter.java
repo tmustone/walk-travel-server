@@ -88,4 +88,15 @@ public class Converter {
         e.setColorCode(pointTemplate.getColorCode());
         return e;
     }
+
+    public List<PointTemplateModel> convertPointTemplates(List<PointTemplateEntity> list) {
+        if (list == null) {
+            return null;
+        }
+        List<PointTemplateModel> result = new LinkedList<>();
+        for (PointTemplateEntity template : list) {
+            result.add(convert(template));
+        }
+        return result;
+    }
 }

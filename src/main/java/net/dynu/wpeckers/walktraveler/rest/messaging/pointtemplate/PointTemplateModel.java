@@ -9,4 +9,5 @@ public class PointTemplateModel {
     private String description;
     private int weight;
     private String colorCode;
+    private int collectedCount;
 }
