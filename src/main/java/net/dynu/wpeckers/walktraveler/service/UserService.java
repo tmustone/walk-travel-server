@@ -1,5 +1,6 @@
 package net.dynu.wpeckers.walktraveler.service;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.dynu.wpeckers.walktraveler.database.model.UserEntity;
 import net.dynu.wpeckers.walktraveler.database.repository.UserRepository;
@@ -10,10 +11,10 @@ import java.util.Date;
 
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class UserService {
 
-    @Autowired
-    private UserRepository userRepository;
+    private final UserRepository userRepository;
 
     public Long create(UserEntity user) {
         UserEntity savedUser = userRepository.save(user);

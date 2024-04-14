@@ -62,21 +62,21 @@ public class DataController extends ControllerBase {
 
         // Read already collected points
         List<PointEntity> pointEntities = pointService.readByUserEmailAndPointStatus(user.getEmail(), PointStatus.COLLECTED);
-        log.info("Collected points by user: " + pointEntities);
+        log.debug("Collected points by user: " + pointEntities);
         Map<String,Long> pointTitleToCountMap = new HashMap<>();
         for (PointEntity point : pointEntities) {
             Long currentCount = pointTitleToCountMap.get(point.getTitle());
             if (currentCount == null) {
                 currentCount = 0L;
             }
-            pointTitleToCountMap.put(point.getTitle(),  currentCount = currentCount + 1);
+            pointTitleToCountMap.put(point.getTitle(),  currentCount + 1);
         }
 
-        log.info("Collected points in map: " + pointTitleToCountMap);
+        log.debug("Collected points in map: " + pointTitleToCountMap);
 
         ReadPointDataResponse response = new ReadPointDataResponse();
         List<PointTemplateModel> pointTemplates = converter.convertPointTemplates(pointTemplateService.readAll());
-        log.info("Templates : " + pointTemplates);
+        log.debug("Templates : " + pointTemplates);
         for (PointTemplateModel pointTemplateModel : pointTemplates) {
             Long currentCount = pointTitleToCountMap.get(pointTemplateModel.getTitle());
             pointTemplateModel.setCollectedCount(currentCount != null ? currentCount.intValue() : 0);

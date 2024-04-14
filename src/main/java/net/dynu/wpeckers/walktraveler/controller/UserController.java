@@ -103,14 +103,14 @@ public class UserController extends ControllerBase {
         return response;
     }
 
-    @ApiOperation(value = "Login user")
+    @ApiOperation(value = "Update user position")
     @RequestMapping(value = "/position", method = RequestMethod.POST, produces = "application/json")
     public @ResponseBody UpdatePositionResponse loginUser(@RequestHeader(value = "sessionId", required = false) String sessionId, @RequestBody UpdatePositionRequest request) throws SessionTimeoutException {
         log.info(" === updatePosition()===");
         UserEntity user = sessionService.validateSession(sessionId);
         user.setLatitude(request.getLatitude());
         user.setLongitude(request.getLongitude());
-        userService.update(user);
+        gameService.updateUserPosition(user, sessionId);
 
         // Calculate and collected points
         List<PointEntity> collectedPoints = gameService.collectPoints(user, user.getLongitude(), user.getLatitude());
@@ -133,18 +133,18 @@ public class UserController extends ControllerBase {
 
         LoginUserResponse response = new LoginUserResponse();
         if (validateSessionResponse.getMessageStatus() == MessageStatus.OK) {
+            String email = validateSessionResponse.getSession().getUserEmail();
             if (validateSessionResponse.getSession().getServiceName().equals(authenticationServiceClient.getServiceName())) {
-                String email = validateSessionResponse.getSession().getUserEmail();
                 UserEntity user = userService.login(email);
                 user.setLastLoginDate(new Date());
                 userService.update(user);
                 sessionService.login(request.getSessionId(), user);
                 response.setUser(converter.convert(user));
-                response.setMessage("User " + validateSessionResponse.getSession().getUserEmail() + " successfully logged in to service!");
+                response.setMessage("User " + email + " successfully logged in to service!");
                 response.setStatus(Status.OK);
             } else {
-                log.warn("User {} does not have permission to service: Service {} VS {}!",validateSessionResponse.getSession().getUserEmail(), validateSessionResponse.getSession().getServiceName(), authenticationServiceClient.getServiceName());
-                response.setMessage("User " + validateSessionResponse.getSession().getUserEmail() + " has not permission to this service with this session!");
+                log.warn("User {} does not have permission to service: Service {} VS {}!", email, validateSessionResponse.getSession().getServiceName(), authenticationServiceClient.getServiceName());
+                response.setMessage("User " + email + " has not permission to this service with this session!");
                 response.setStatus(Status.ERROR);
             }
         } else {

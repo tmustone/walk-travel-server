@@ -33,6 +33,7 @@ public class GameService {
     private final SessionService sessionService;
     private final PointService pointService;
     private final PointTemplateService pointTemplateService;
+    private final UserService userService;
 
     private Random random = new Random();
     private long lastShownSessions;
@@ -42,13 +43,11 @@ public class GameService {
 
     private int getUserCollectCount(String email) {
         Integer collectCount = userIdToCollectCountMap.get(email);
-        log.info("getUserCollectCount({})={}", email, collectCount);
         return collectCount == null ? 0 : collectCount.intValue();
     }
 
     private void addCollectCount(String email) {
         int newCount = getUserCollectCount(email) + 1;
-        log.info("Update user {} collect count to {}", email, newCount);
         userIdToCollectCountMap.put(email, newCount);
         userIdToLastCollectTimeMap.put(email, System.currentTimeMillis());
     }
@@ -61,7 +60,6 @@ public class GameService {
     private void resetUserLastCollectData(String email) {
         this.userIdToLastCollectTimeMap.put(email, 0L);
         this.userIdToCollectCountMap.put(email, 0);
-        log.info("RESET USER LAST COLLECT DATA : {}", email);
     }
 
     @Scheduled(fixedDelay = 10000, initialDelay = 10000)
@@ -73,6 +71,7 @@ public class GameService {
             return;
         }
 
+        long startTime = System.currentTimeMillis();
         if (lastShownSessions < System.currentTimeMillis()) {
             List<UserEntity> users = sessionService.getLoggedInUsers();
             log.info(" === ACTIVE SESSIONS === ");
@@ -105,7 +104,7 @@ public class GameService {
             int collectCount = getUserCollectCount(user.getEmail());
             long nextPointCreationTime = lastCollectTime + (collectCount * 1000*60);
             boolean timeToCreateNewPoint  =  nextPointCreationTime < System.currentTimeMillis() ? true : false;
-            log.info("CREATE POINT STATUS : onlineSeconds={}, activePointCount={}, collectCount={}, lastCollectTime={}", onlineSeconds, activePoints.size(), collectCount, new Date(lastCollectTime));
+            log.debug("CREATE POINT STATUS : onlineSeconds={}, activePointCount={}, collectCount={}, lastCollectTime={}", onlineSeconds, activePoints.size(), collectCount, new Date(lastCollectTime));
             if (onlineSeconds > 6 && activePoints.size() < pointsOnline) {
                 if (timeToCreateNewPoint == false) {
                     long secondsLeft = (nextPointCreationTime - System.currentTimeMillis())/1000;
@@ -144,6 +143,8 @@ public class GameService {
                 }
             }
         }
+        long totalTime = System.currentTimeMillis() - startTime;
+        log.info("Game service run took {} ms", totalTime);
     }
 
     public int getNextInt() {
@@ -193,5 +194,10 @@ public class GameService {
             result.add(userModel);
         }
         return result;
+    }
+
+    public void updateUserPosition(UserEntity user, String sessionId) {
+        userService.update(user);
+        sessionService.updateUser(sessionId, user);
     }
 }

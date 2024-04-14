@@ -76,11 +76,19 @@ public class SessionService {
         return onlineUsers;
     }
 
+    public void updateUser(String sessionId, UserEntity user) {
+        synchronized (sessionIdToUserMap) {
+            sessionIdToUserMap.put(sessionId, user);
+        }
+    }
+
     public UserEntity login(String sessionId, UserEntity user) {
         if (sessionId != null) {
             log.info("User is logged in with session {} : {}" , sessionId, user);
-            sessionIdToUserMap.put(sessionId, user);
-            sessionIdToExpirationTimeMap.put(sessionId, new Long(System.currentTimeMillis()));
+            synchronized (sessionIdToUserMap) {
+                sessionIdToUserMap.put(sessionId, user);
+                sessionIdToExpirationTimeMap.put(sessionId, new Long(System.currentTimeMillis()));
+            }
             return user;
         } else {
             throw new RuntimeException("Cannot create session when session ID is null!");
