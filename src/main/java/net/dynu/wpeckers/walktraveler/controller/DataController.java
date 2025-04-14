@@ -5,7 +5,6 @@ import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import net.dynu.wpeckers.authentication.api.enums.MessageStatus;
 import net.dynu.wpeckers.walktraveler.database.model.PointEntity;
 import net.dynu.wpeckers.walktraveler.database.model.PointStatus;
 import net.dynu.wpeckers.walktraveler.database.model.UserEntity;
@@ -52,7 +51,7 @@ public class DataController extends ControllerBase {
         response.setOnlineUsers(onlineUsers);
         response.setPoints(converter.convertPoints(pointService.readLatestPointsForUser(user.getEmail())));
         response.setMessage("Read " + response.getOnlineUsers().size() + " online users and " + response.getPoints().size() + " points!");
-        response.setMessageStatus(MessageStatus.OK);
+        response.setStatus(Status.OK);
         return response;
     }
 

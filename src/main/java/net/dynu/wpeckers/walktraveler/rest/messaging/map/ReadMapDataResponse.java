@@ -2,7 +2,7 @@ package net.dynu.wpeckers.walktraveler.rest.messaging.map;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import net.dynu.wpeckers.authentication.api.messaging.ResponseBase;
+import net.dynu.wpeckers.walktraveler.rest.messaging.ResponseBase;
 import net.dynu.wpeckers.walktraveler.rest.messaging.point.PointModel;
 import net.dynu.wpeckers.walktraveler.rest.messaging.user.UserModel;
 

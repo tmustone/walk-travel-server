@@ -4,11 +4,7 @@ import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import net.dynu.wpeckers.authentication.api.enums.MessageStatus;
-import net.dynu.wpeckers.authentication.api.messaging.user.LogoutResponse;
-import net.dynu.wpeckers.authentication.api.messaging.user.ValidateSessionResponse;
 import net.dynu.wpeckers.common.Common;
-import net.dynu.wpeckers.walktraveler.configuration.AuthenticationConfiguration;
 import net.dynu.wpeckers.walktraveler.database.model.PointEntity;
 import net.dynu.wpeckers.walktraveler.database.model.UserEntity;
 import net.dynu.wpeckers.walktraveler.exceptions.SessionTimeoutException;
@@ -40,7 +36,6 @@ import java.util.UUID;
 public class UserController extends ControllerBase {
 
     private final UserService userService;
-    private final AuthenticationConfiguration authenticationServiceClient;
     private final SessionService sessionService;
     private final GameService gameService;
     private final MailService mailService;

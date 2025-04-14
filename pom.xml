@@ -179,18 +179,7 @@
             <artifactId>commons</artifactId>
             <version>1.0-SNAPSHOT</version>
         </dependency>
-        <!-- net\dynu\wpeckers\authentication\authentication-client\1.1-SNAPSHOT\authentication-client-1.1-SNAPSHOT.jar -->
-        <dependency>
-            <groupId>net.dynu.wpeckers.authentication</groupId>
-            <artifactId>authentication-client</artifactId>
-            <version>1.1-SNAPSHOT</version>
-        </dependency>
 
-        <dependency>
-            <groupId>net.dynu.wpeckers.authentication</groupId>
-            <artifactId>authentication-common</artifactId>
-            <version>1.1-SNAPSHOT</version>
-        </dependency>
     </dependencies>
 
     <build>
