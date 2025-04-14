@@ -17,8 +17,10 @@ public class UserEntity extends BaseObject {
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Long userId;
     private String email;
+    private String fastLoginSecret;
     private Date registerDate;
     private Date lastLoginDate;
+    private Date fastLoginSecretDate;
     private String longitude;
     private String latitude;
 }

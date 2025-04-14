@@ -5,4 +5,5 @@ import org.springframework.data.repository.CrudRepository;
 
 public interface UserRepository extends CrudRepository<UserEntity, Long> {
     public UserEntity readByEmail(String email);
+    public UserEntity readByFastLoginSecret(String fastLoginSecret);
 }

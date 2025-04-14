@@ -8,7 +8,7 @@ import java.text.DecimalFormat;
 @Slf4j
 public class GameServiceTest {
 
-    private GameService gameService = new GameService(null, null, null, null);
+    private GameService gameService = new GameService(null, null, null, null, null);
 
     @Test
     public void test() {

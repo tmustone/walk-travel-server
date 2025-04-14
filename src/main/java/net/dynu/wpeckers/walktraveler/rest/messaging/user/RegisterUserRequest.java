@@ -5,7 +5,7 @@ import lombok.NoArgsConstructor;
 
 @NoArgsConstructor
 @Data
-public class LoginUserRequest {
-    private String sessionId;
-    private String fastLoginSecret;
+public class RegisterUserRequest {
+    private String serviceBaseUrl;
+    private String email;
 }

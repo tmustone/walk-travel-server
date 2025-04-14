@@ -2,10 +2,10 @@ package net.dynu.wpeckers.walktraveler.rest.messaging.user;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import net.dynu.wpeckers.walktraveler.rest.messaging.ResponseBase;
 
-@NoArgsConstructor
 @Data
-public class LoginUserRequest {
+@NoArgsConstructor
+public class LogoutUserResponse extends ResponseBase {
     private String sessionId;
-    private String fastLoginSecret;
 }

@@ -21,6 +21,8 @@ public class Converter {
         u.setRegisterDate(user.getRegisterDate());
         u.setLatitude(user.getLatitude());
         u.setLongitude(user.getLongitude());
+        u.setFastLoginSecret(user.getFastLoginSecret());
+        u.setFastLoginSecretDate(user.getFastLoginSecretDate());
         return u;
     }
 

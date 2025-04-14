@@ -5,6 +5,7 @@ import io.swagger.annotations.ApiOperation;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.dynu.wpeckers.authentication.api.enums.MessageStatus;
+import net.dynu.wpeckers.authentication.api.messaging.user.LogoutResponse;
 import net.dynu.wpeckers.authentication.api.messaging.user.ValidateSessionResponse;
 import net.dynu.wpeckers.common.Common;
 import net.dynu.wpeckers.walktraveler.configuration.AuthenticationConfiguration;
@@ -13,15 +14,9 @@ import net.dynu.wpeckers.walktraveler.database.model.UserEntity;
 import net.dynu.wpeckers.walktraveler.exceptions.SessionTimeoutException;
 import net.dynu.wpeckers.walktraveler.rest.enums.Status;
 import net.dynu.wpeckers.walktraveler.rest.messaging.point.UserInfoResponse;
-import net.dynu.wpeckers.walktraveler.rest.messaging.user.LoginUserRequest;
-import net.dynu.wpeckers.walktraveler.rest.messaging.user.LoginUserResponse;
-import net.dynu.wpeckers.walktraveler.rest.messaging.user.ReadUserResponse;
-import net.dynu.wpeckers.walktraveler.rest.messaging.user.ReadUsersResponse;
-import net.dynu.wpeckers.walktraveler.rest.messaging.user.UpdatePositionRequest;
-import net.dynu.wpeckers.walktraveler.rest.messaging.user.UpdatePositionResponse;
-import net.dynu.wpeckers.walktraveler.rest.messaging.user.UserModel;
+import net.dynu.wpeckers.walktraveler.rest.messaging.user.*;
 import net.dynu.wpeckers.walktraveler.service.GameService;
-import net.dynu.wpeckers.walktraveler.service.PointService;
+import net.dynu.wpeckers.walktraveler.service.MailService;
 import net.dynu.wpeckers.walktraveler.service.SessionService;
 import net.dynu.wpeckers.walktraveler.service.UserService;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -35,6 +30,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.UUID;
 
 @Slf4j
 @RestController
@@ -47,6 +43,7 @@ public class UserController extends ControllerBase {
     private final AuthenticationConfiguration authenticationServiceClient;
     private final SessionService sessionService;
     private final GameService gameService;
+    private final MailService mailService;
 
     @ApiOperation(value = "Read a user with ID")
     @RequestMapping(value = "/user/{id}", method = RequestMethod.GET)
@@ -86,7 +83,7 @@ public class UserController extends ControllerBase {
     public @ResponseBody ReadUsersResponse readOnlineUsers(@RequestHeader(value = "sessionId", required = false) String sessionId) throws SessionTimeoutException {
         sessionService.validateSession(sessionId);
         log.info(" === readOnlineUsers()===");
-        List<UserModel> users = converter.convertUsers(sessionService.getLoggedInUsers());
+        List<UserModel> users = converter.convertUsers(new LinkedList<>(sessionService.getLoggedInUsers().values()));
         users = gameService.populateCollectCounts(users);
         log.info("Read " + users.size() + " users successfully!");
         return new ReadUsersResponse(Status.OK, "Read " + users.size() + " online users successfully!", users);
@@ -105,7 +102,7 @@ public class UserController extends ControllerBase {
 
     @ApiOperation(value = "Update user position")
     @RequestMapping(value = "/position", method = RequestMethod.POST, produces = "application/json")
-    public @ResponseBody UpdatePositionResponse loginUser(@RequestHeader(value = "sessionId", required = false) String sessionId, @RequestBody UpdatePositionRequest request) throws SessionTimeoutException {
+    public @ResponseBody UpdatePositionResponse updatePosition(@RequestHeader(value = "sessionId", required = false) String sessionId, @RequestBody UpdatePositionRequest request) throws SessionTimeoutException {
         log.info(" === updatePosition()===");
         UserEntity user = sessionService.validateSession(sessionId);
         user.setLatitude(request.getLatitude());
@@ -124,33 +121,71 @@ public class UserController extends ControllerBase {
         return response;
     }
 
-    @ApiOperation(value = "Login user")
-    @RequestMapping(value = "/login", method = RequestMethod.POST, produces = "application/json")
-    public @ResponseBody LoginUserResponse loginUser(@RequestBody LoginUserRequest request) {
-        log.info(" === loginUser({})===", request.getSessionId());
-        ValidateSessionResponse validateSessionResponse = this.authenticationServiceClient.getAuthenticationClient().validateSession(request.getSessionId());
-        log.info("AuthenticationService response : " + validateSessionResponse);
-
-        LoginUserResponse response = new LoginUserResponse();
-        if (validateSessionResponse.getMessageStatus() == MessageStatus.OK) {
-            String email = validateSessionResponse.getSession().getUserEmail();
-            if (validateSessionResponse.getSession().getServiceName().equals(authenticationServiceClient.getServiceName())) {
-                UserEntity user = userService.login(email);
-                user.setLastLoginDate(new Date());
-                userService.update(user);
-                sessionService.login(request.getSessionId(), user);
-                response.setUser(converter.convert(user));
-                response.setMessage("User " + email + " successfully logged in to service!");
-                response.setStatus(Status.OK);
-            } else {
-                log.warn("User {} does not have permission to service: Service {} VS {}!", email, validateSessionResponse.getSession().getServiceName(), authenticationServiceClient.getServiceName());
-                response.setMessage("User " + email + " has not permission to this service with this session!");
-                response.setStatus(Status.ERROR);
-            }
+    @ApiOperation(value = "Fast login user")
+    @RequestMapping(value = "/fastlogin", method = RequestMethod.POST, produces = "application/json")
+    public @ResponseBody FastLoginUserResponse fastLogin(@RequestBody FastLoginUserRequest request) {
+        FastLoginUserResponse response = new FastLoginUserResponse();
+        UserEntity user = userService.readAndLoginUserByFastLoginSecret(request.getFastLoginSecret());
+        if (user != null) {
+            String sessionId = UUID.randomUUID().toString();
+            sessionService.login(sessionId, user);
+            response.setMessage("User logged in successfully!");
+            response.setStatus(Status.OK);
+            response.setUser(converter.convert(user));
+            response.setFastLoginSecret(request.getFastLoginSecret());
+            response.setSessionId(sessionId);
+            log.info("User {} logged in successfully with fast login secret {}!", user.getEmail(), request.getFastLoginSecret());
         } else {
-            response.setMessage("Login failed for user failed : " + response.getMessage());
-            response.setStatus(Status.ERROR);
+            response.setMessage("User not found with given fast login secret!");
+            response.setStatus(Status.NOTFOUND);
+            log.warn("User not found with given login secret {} from database!", request.getFastLoginSecret());
         }
+        return response;
+    }
+
+    @ApiOperation(value = "Register user")
+    @RequestMapping(value = "/register", method = RequestMethod.POST, produces = "application/json")
+    public @ResponseBody RegisterUserResponse registerOrLoginUser(@RequestBody RegisterUserRequest request) {
+        RegisterUserResponse response = new RegisterUserResponse();
+        String fastLoginSecret = UUID.randomUUID().toString();
+        UserEntity user = userService.readByEmail(request.getEmail());
+        if (user != null) {
+            user.setFastLoginSecret(fastLoginSecret);
+            user.setFastLoginSecretDate(new Date());
+            userService.update(user);
+            log.info("User {} fast login secret updated successfully!", user.getEmail());
+
+            mailService.sendWelcomeMail(request.getEmail(), fastLoginSecret, request.getServiceBaseUrl());
+
+            response.setMessage("User fast login secret updated successfully!");
+            response.setStatus(Status.OK);
+            response.setEmail(request.getEmail());
+        } else {
+            user = new UserEntity();
+            user.setEmail(request.getEmail());
+            user.setRegisterDate(new Date());
+            user.setFastLoginSecret(fastLoginSecret);
+            user.setFastLoginSecretDate(new Date());
+            user.setCreatedDate(new Date());
+            user.setModifiedDate(new Date());
+            Long userId = userService.create(user);
+            log.info("User {} with e-mail {} fast login secret updated successfully!", userId, user.getEmail());
+        }
+        mailService.sendWelcomeMail(request.getEmail(), fastLoginSecret, request.getServiceBaseUrl());
+        log.info("Sent welcome mail to {}" , request.getEmail());
+        return response;
+    }
+
+    @ApiOperation(value = "Logout")
+    @RequestMapping(value = "/logout", method = RequestMethod.POST, produces = "application/json")
+    public @ResponseBody LogoutUserResponse fastLogin(@RequestHeader(value = "sessionId", required = false) String sessionId, @RequestBody LogoutUserRequest request) throws SessionTimeoutException {
+        LogoutUserResponse response = new LogoutUserResponse();
+        UserEntity user = sessionService.validateSession(sessionId);
+        sessionService.logout(sessionId, user);
+        log.info("User {} logged out from from session {}", user.getEmail(), sessionId);
+        response.setMessage("User logged out successfully from session " + sessionId);
+        response.setStatus(Status.OK);
+        response.setSessionId(sessionId);
         return response;
     }
 }

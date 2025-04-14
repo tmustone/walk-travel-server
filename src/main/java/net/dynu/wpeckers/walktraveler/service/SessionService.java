@@ -7,10 +7,7 @@ import net.dynu.wpeckers.walktraveler.exceptions.SessionTimeoutException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Slf4j
 @Service
@@ -25,6 +22,10 @@ public class SessionService {
 
     @Value("${spring.profiles.active:}")
     private String activeProfiles;
+
+    public Long getSessionExpirationTime(String sessionId) {
+        return sessionIdToExpirationTimeMap.get(sessionId);
+    }
 
     public UserEntity getUser(String sessionId) throws SessionTimeoutException {
 
@@ -51,8 +52,8 @@ public class SessionService {
         return this.getUser(sessionId);
     }
 
-    public List<UserEntity> getLoggedInUsers() {
-        List<UserEntity> onlineUsers = new LinkedList<>();
+    public Map<String, UserEntity> getLoggedInUsers() {
+        Map<String, UserEntity> onlineUsers = new LinkedHashMap<String, UserEntity>();
         long now = System.currentTimeMillis();
         long timeout = SESSION_TIMEOUT_SECONDS*1000;
         synchronized (sessionIdToUserMap) {
@@ -60,11 +61,11 @@ public class SessionService {
             for (String sessionId : sessionIdToUserMap.keySet()) {
                 Long expirationTime = sessionIdToExpirationTimeMap.get(sessionId);
                 UserEntity user = sessionIdToUserMap.get(sessionId);
-                if (expirationTime == null || expirationTime.longValue() + timeout < now) {
-                    log.info("Session timeout {} VS {} for session {} with user {}", expirationTime.longValue() + timeout, now, sessionId, user != null ? user.getEmail() : null);
+                if (expirationTime == null || expirationTime + timeout < now) {
+                    log.info("Session timeout {} VS {} for session {} with user {}", expirationTime != null ? (expirationTime + timeout) : -1, now, sessionId, user != null ? user.getEmail() : null);
                     removeSessions.add(sessionId);
                 } else {
-                    onlineUsers.add(user);
+                    onlineUsers.put(sessionId, user);
                 }
             }
             for (String sessionIdToRemove : removeSessions) {
@@ -87,11 +88,19 @@ public class SessionService {
             log.info("User is logged in with session {} : {}" , sessionId, user);
             synchronized (sessionIdToUserMap) {
                 sessionIdToUserMap.put(sessionId, user);
-                sessionIdToExpirationTimeMap.put(sessionId, new Long(System.currentTimeMillis()));
+                sessionIdToExpirationTimeMap.put(sessionId, System.currentTimeMillis());
             }
             return user;
         } else {
             throw new RuntimeException("Cannot create session when session ID is null!");
+        }
+    }
+
+    public void logout(String sessionId, UserEntity user) {
+        log.info("Logging out user {} with session {}" , user != null ? user.getEmail() : null, sessionId);
+        synchronized (sessionIdToUserMap) {
+            sessionIdToUserMap.remove(sessionId, user);
+            sessionIdToExpirationTimeMap.remove(sessionId);
         }
     }
 }

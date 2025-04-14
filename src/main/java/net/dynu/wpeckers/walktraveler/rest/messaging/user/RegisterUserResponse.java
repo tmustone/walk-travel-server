@@ -6,8 +6,6 @@ import net.dynu.wpeckers.walktraveler.rest.messaging.ResponseBase;
 
 @Data
 @NoArgsConstructor
-public class LoginUserResponse extends ResponseBase {
-    private UserModel user;
-    private String sessionId;
-    private String fastLoginSecret;
+public class RegisterUserResponse extends ResponseBase {
+    private String email;
 }

@@ -11,6 +11,8 @@ import java.util.Date;
 @AllArgsConstructor
 public class UserModel {
     private String email;
+    private String fastLoginSecret;
+    private Date fastLoginSecretDate;
     private Date lastLoginDate;
     private Date registerDate;
     private String longitude;

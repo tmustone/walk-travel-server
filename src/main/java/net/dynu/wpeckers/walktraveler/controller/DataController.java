@@ -26,6 +26,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -46,7 +47,7 @@ public class DataController extends ControllerBase {
     public @ResponseBody ReadMapDataResponse readMapData(@RequestHeader(value = "sessionId", required = false) String sessionId) throws SessionTimeoutException {
         UserEntity user = sessionService.validateSession(sessionId);
         ReadMapDataResponse response = new ReadMapDataResponse();
-        List<UserModel> onlineUsers = converter.convertUsers(sessionService.getLoggedInUsers());
+        List<UserModel> onlineUsers = converter.convertUsers(new LinkedList<>(sessionService.getLoggedInUsers().values()));
         gameService.populateCollectCounts(onlineUsers);
         response.setOnlineUsers(onlineUsers);
         response.setPoints(converter.convertPoints(pointService.readLatestPointsForUser(user.getEmail())));
