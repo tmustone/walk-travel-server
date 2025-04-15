@@ -53,7 +53,7 @@ public class SessionService {
     }
 
     public Map<String, UserEntity> getLoggedInUsers() {
-        Map<String, UserEntity> onlineUsers = new LinkedHashMap<String, UserEntity>();
+        Map<String, UserEntity> onlineUsers = new LinkedHashMap<>();
         long now = System.currentTimeMillis();
         long timeout = SESSION_TIMEOUT_SECONDS*1000;
         synchronized (sessionIdToUserMap) {

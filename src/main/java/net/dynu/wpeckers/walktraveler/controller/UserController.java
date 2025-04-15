@@ -149,9 +149,6 @@ public class UserController extends ControllerBase {
             user.setFastLoginSecretDate(new Date());
             userService.update(user);
             log.info("User {} fast login secret updated successfully!", user.getEmail());
-
-            mailService.sendWelcomeMail(request.getEmail(), fastLoginSecret, request.getServiceBaseUrl());
-
             response.setMessage("User fast login secret updated successfully!");
             response.setStatus(Status.OK);
             response.setEmail(request.getEmail());
@@ -164,7 +161,10 @@ public class UserController extends ControllerBase {
             user.setCreatedDate(new Date());
             user.setModifiedDate(new Date());
             Long userId = userService.create(user);
-            log.info("User {} with e-mail {} fast login secret updated successfully!", userId, user.getEmail());
+            log.info("User {} with e-mail {} fast login secret created successfully!", userId, user.getEmail());
+            response.setMessage("New user created successfully!");
+            response.setStatus(Status.OK);
+            response.setEmail(request.getEmail());
         }
         mailService.sendWelcomeMail(request.getEmail(), fastLoginSecret, request.getServiceBaseUrl());
         log.info("Sent welcome mail to {}" , request.getEmail());
